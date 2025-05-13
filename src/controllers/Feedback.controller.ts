@@ -1,4 +1,4 @@
- // controllers/FeedbackController.ts
+  // controllers/FeedbackController.ts
 import { Request, Response } from 'express';
 import Feedback from '../models/Feedbacks.model';
 import Workout, { WorkoutStatus } from '../models/Workouts.model';
@@ -85,10 +85,27 @@ export const createFeedback = async (req: Request, res: Response): Promise<void>
     const workoutDateTime = new Date(year, month - 1, day, hours, minutes);
     const currentDateTime = new Date();
     
-    if (workoutDateTime > currentDateTime) {
+    // Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
+    const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+    
+    // Log times for debugging
+    console.log('Workout date/time:', workoutDateTime.toISOString());
+    console.log('Current server date/time:', currentDateTime.toISOString());
+    console.log('Time difference (ms):', workoutDateTime.getTime() - currentDateTime.getTime());
+    console.log('Buffer (ms):', bufferMs);
+    console.log('Is workout in future after buffer?', workoutDateTime.getTime() > (currentDateTime.getTime() + bufferMs));
+ 
+    // Only consider it a future workout if it's more than the buffer time ahead
+    if (workoutDateTime.getTime() > (currentDateTime.getTime() + bufferMs)) {
       res.status(422).json({
         error: 'Unprocessable Entity: Cannot provide feedback for future workouts',
-        toastMessage: 'You cannot provide feedback for workouts scheduled in the future'
+        toastMessage: 'You cannot provide feedback for workouts scheduled in the future',
+        debug: {
+          workoutTime: workoutDateTime.toISOString(),
+          serverTime: currentDateTime.toISOString(),
+          timeDifference: workoutDateTime.getTime() - currentDateTime.getTime(),
+          bufferApplied: bufferMs
+        }
       });
       return;
     }

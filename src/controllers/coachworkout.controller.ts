@@ -1,4 +1,4 @@
- import { Request, Response } from 'express';
+  import { Request, Response } from 'express';
 import Workout, { WorkoutStatus } from '../models/Workouts.model';
 import mongoose from 'mongoose';
  
@@ -79,26 +79,27 @@ export const cancelWorkout = async (req: Request, res: Response): Promise<void> 
  
 export const getCoachWorkouts = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Extract clientId from query parameters
+    // Extract coachId from query parameters
     const { coachId } = req.query;
+    console.log('Received request to fetch workouts for coachId:', coachId);
    
     // Build query object
     const query: any = {};
    
-    // Add clientId filter if provided
+    // Add coachId filter if provided
     if (coachId) {
       // Validate clientId format if provided
       if (typeof coachId === 'string' && !mongoose.Types.ObjectId.isValid(coachId)) {
         res.status(400).json({
-          error: 'Bad Request: Invalid client ID format',
-          toastMessage: 'Invalid client ID format'
+          error: 'Bad Request: Invalid coach ID format',
+          toastMessage: 'Invalid coach ID format'
         });
         return;
       }
      
       // Add to query if valid
       if (coachId) {
-        query.clientId = coachId;
+        query.coachId = coachId;
       }
     }
    
@@ -192,3 +193,4 @@ export const getCoachWorkouts = async (req: Request, res: Response): Promise<voi
     });
   }
 };
+ 

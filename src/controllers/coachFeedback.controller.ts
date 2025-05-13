@@ -51,18 +51,16 @@ export const createCoachFeedback = async (req: Request, res: Response): Promise<
       // Create Date object (months are 0-indexed in JavaScript)
       const workoutDateTime = new Date(year, month - 1, day, hours, minutes);
       
-      // Get current date and time
-      const now = new Date();
-      
-      // Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
-      const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
-      const adjustedNow = new Date(now.getTime() - bufferMs);
-      
-      console.log(`Workout date/time: ${workoutDateTime.toISOString()}`);
-      console.log(`Server date/time: ${now.toISOString()}`);
-      console.log(`Adjusted date/time for IST: ${adjustedNow.toISOString()}`);
-      console.log(`Time difference (ms): ${workoutDateTime.getTime() - adjustedNow.getTime()}`);
-      console.log(`Is workout in past? ${workoutDateTime < adjustedNow}`);
+    const now = new Date();
+
+// Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
+const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+const adjustedNow = new Date(now.getTime() + bufferMs); // CHANGED: now adding the buffer
+
+console.log(`Workout date/time: ${workoutDateTime.toISOString()}`);
+console.log(`Server date/time: ${now.toISOString()}`);
+console.log(`Adjusted date/time for IST: ${adjustedNow.toISOString()}`);
+console.log(`Is workout in past? ${workoutDateTime < adjustedNow}`);
    
       // Check if the workout date and time have passed (using adjusted time for IST)
       if (workoutDateTime < adjustedNow) {

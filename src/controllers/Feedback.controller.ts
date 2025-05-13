@@ -84,10 +84,8 @@ export const createFeedback = async (req: Request, res: Response): Promise<void>
     // Create Date object (months are 0-indexed in JavaScript)
     const workoutDateTime = new Date(year, month - 1, day, hours, minutes);
     const currentDateTime = new Date();
-    
-    // Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
-    const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
-    const adjustedCurrentDateTime = new Date(currentDateTime.getTime() - bufferMs);
+   const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+const adjustedCurrentDateTime = new Date(currentDateTime.getTime() + bufferMs); 
     
     // Log times for debugging
     console.log('Workout date/time:', workoutDateTime.toISOString());

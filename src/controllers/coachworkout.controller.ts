@@ -40,13 +40,10 @@ export const cancelWorkout = async (req: Request, res: Response): Promise<void> 
     const workoutDate = new Date(year, month - 1, day);
     workoutDate.setHours(hours, minutes, 0, 0);
  
-    const now = new Date();
-    
-    // Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
-    const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
-    const adjustedNow = new Date(now.getTime() - bufferMs);
-    
-    // Calculate time difference in hours (using adjusted time for IST)
+   const now = new Date();
+// Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
+const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+const adjustedNow = new Date(now.getTime() + bufferMs); // CORRECT: adding the buffer // Calculate time difference in hours (using adjusted time for IST)
     const hoursRemaining = (workoutDate.getTime() - adjustedNow.getTime()) / (1000 * 60 * 60);
     
     console.log(`Workout time: ${workoutDate.toISOString()}`);
@@ -126,12 +123,9 @@ export const getCoachWorkouts = async (req: Request, res: Response): Promise<voi
       return;
     }
    
-    // Get current date and time
-    const now = new Date();
-    
-    // Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
-    const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
-    const adjustedNow = new Date(now.getTime() - bufferMs);
+ const now = new Date();
+const bufferMs = (5 * 60 + 30) * 60 * 1000;
+const adjustedNow = new Date(now.getTime() + bufferMs); 
    
     // Format adjusted date as DD-MM-YYYY to match database format
     const day = String(adjustedNow.getDate()).padStart(2, '0');

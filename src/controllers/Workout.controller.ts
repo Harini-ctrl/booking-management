@@ -223,17 +223,29 @@ export const getBookedWorkouts = async (req: Request, res: Response): Promise<vo
     // Array to track workouts that need status updates
     const workoutsToUpdate = [];
     
+    // Helper function to convert DD-MM-YYYY to a comparable date value
+    const convertDateToComparable = (dateStr: string): number => {
+      const [day, month, year] = dateStr.split('-').map(Number);
+      return year * 10000 + month * 100 + day; // Creates a number like YYYYMMDD
+    };
+    
+    // Get comparable value for current date
+    const comparableCurrentDate = convertDateToComparable(currentDate);
+    
     // Check each workout to see if its date and time have passed
     for (const workout of workouts) {
       // Only check workouts that aren't already finished or cancelled
       if (workout.clientStatus !== 'Finished' && workout.clientStatus !== 'Cancelled') {
-        // Compare dates first
-        if (workout.date < currentDate) {
+        // Convert workout date to comparable format
+        const comparableWorkoutDate = convertDateToComparable(workout.date);
+        
+        // Compare dates properly
+        if (comparableWorkoutDate < comparableCurrentDate) {
           // If workout date is earlier than current date
           workoutsToUpdate.push(workout._id);
-          console.log(`Workout ${workout._id} date ${workout.date} is before current date ${currentDate}`);
+          console.log(`Workout ${workout._id} date ${workout.date} is before current date ${currentDate} (${comparableWorkoutDate} < ${comparableCurrentDate})`);
         } 
-        else if (workout.date === currentDate && workout.time < currentTime) {
+        else if (comparableWorkoutDate === comparableCurrentDate && workout.time < currentTime) {
           // If same date but workout time is earlier than current time
           workoutsToUpdate.push(workout._id);
           console.log(`Workout ${workout._id} time ${workout.time} has passed on current date ${currentDate}`);
@@ -283,7 +295,6 @@ export const getBookedWorkouts = async (req: Request, res: Response): Promise<vo
     });
   }
 };
-
 export const cancelWorkout = async (req: Request, res: Response): Promise<void> => {
   try {
     const { workoutId } = req.params;

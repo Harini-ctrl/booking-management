@@ -1,4 +1,4 @@
-  // controllers/FeedbackController.ts
+ // controllers/FeedbackController.ts
 import { Request, Response } from 'express';
 import Feedback from '../models/Feedbacks.model';
 import Workout, { WorkoutStatus } from '../models/Workouts.model';
@@ -87,24 +87,25 @@ export const createFeedback = async (req: Request, res: Response): Promise<void>
     
     // Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
     const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+    const adjustedCurrentDateTime = new Date(currentDateTime.getTime() - bufferMs);
     
     // Log times for debugging
     console.log('Workout date/time:', workoutDateTime.toISOString());
     console.log('Current server date/time:', currentDateTime.toISOString());
-    console.log('Time difference (ms):', workoutDateTime.getTime() - currentDateTime.getTime());
-    console.log('Buffer (ms):', bufferMs);
-    console.log('Is workout in future after buffer?', workoutDateTime.getTime() > (currentDateTime.getTime() + bufferMs));
+    console.log('Adjusted date/time for IST:', adjustedCurrentDateTime.toISOString());
+    console.log('Time difference (ms):', workoutDateTime.getTime() - adjustedCurrentDateTime.getTime());
+    console.log('Is workout in future?', workoutDateTime > adjustedCurrentDateTime);
  
-    // Only consider it a future workout if it's more than the buffer time ahead
-    if (workoutDateTime.getTime() > (currentDateTime.getTime() + bufferMs)) {
+    // Check if workout is in the future (using adjusted time for IST)
+    if (workoutDateTime > adjustedCurrentDateTime) {
       res.status(422).json({
         error: 'Unprocessable Entity: Cannot provide feedback for future workouts',
         toastMessage: 'You cannot provide feedback for workouts scheduled in the future',
         debug: {
           workoutTime: workoutDateTime.toISOString(),
           serverTime: currentDateTime.toISOString(),
-          timeDifference: workoutDateTime.getTime() - currentDateTime.getTime(),
-          bufferApplied: bufferMs
+          adjustedServerTime: adjustedCurrentDateTime.toISOString(),
+          timeDifference: workoutDateTime.getTime() - adjustedCurrentDateTime.getTime()
         }
       });
       return;

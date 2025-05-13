@@ -43,37 +43,49 @@ export const createCoachFeedback = async (req: Request, res: Response): Promise<
       return;
     }
  
-    // Parse the date in DD-MM-YYYY format
-    const [day, month, year] = workout.date.split('-').map(Number);
-    const [hours, minutes] = workout.time.split(':').map(Number);
-    
-    // Create Date object (months are 0-indexed in JavaScript)
-    const workoutDateTime = new Date(year, month - 1, day, hours, minutes);
-    
-    // Get current date and time
-    const now = new Date();
-    
-    // Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
-    const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
-    const adjustedNow = new Date(now.getTime() - bufferMs);
-    
-    console.log(`Workout date/time: ${workoutDateTime.toISOString()}`);
-    console.log(`Server date/time: ${now.toISOString()}`);
-    console.log(`Adjusted date/time for IST: ${adjustedNow.toISOString()}`);
-    console.log(`Is workout in past? ${workoutDateTime < adjustedNow}`);
- 
-    // Check if the workout date and time have passed (using adjusted time for IST)
-    if (workoutDateTime < adjustedNow) {
-      console.log(`Workout ${workout._id} is eligible for feedback.`);
-    } else {
-      res.status(400).json({
-        error: 'Bad Request: Workout is not yet completed',
-        toastMessage: 'You can only provide feedback for workouts that have already occurred',
-        debug: {
-          workoutTime: workoutDateTime.toISOString(),
-          serverTime: now.toISOString(),
-          adjustedTime: adjustedNow.toISOString()
-        }
+    try {
+      // Parse the date in DD-MM-YYYY format
+      const [day, month, year] = workout.date.split('-').map(Number);
+      const [hours, minutes] = workout.time.split(':').map(Number);
+      
+      // Create Date object (months are 0-indexed in JavaScript)
+      const workoutDateTime = new Date(year, month - 1, day, hours, minutes);
+      
+      // Get current date and time
+      const now = new Date();
+      
+      // Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
+      const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+      const adjustedNow = new Date(now.getTime() - bufferMs);
+      
+      console.log(`Workout date/time: ${workoutDateTime.toISOString()}`);
+      console.log(`Server date/time: ${now.toISOString()}`);
+      console.log(`Adjusted date/time for IST: ${adjustedNow.toISOString()}`);
+      console.log(`Time difference (ms): ${workoutDateTime.getTime() - adjustedNow.getTime()}`);
+      console.log(`Is workout in past? ${workoutDateTime < adjustedNow}`);
+   
+      // Check if the workout date and time have passed (using adjusted time for IST)
+      if (workoutDateTime < adjustedNow) {
+        console.log(`Workout ${workout._id} is eligible for feedback.`);
+      } else {
+        res.status(400).json({
+          error: 'Bad Request: Workout is not yet completed',
+          toastMessage: 'You can only provide feedback for workouts that have already occurred',
+          debug: {
+            workoutTime: workoutDateTime.toISOString(),
+            serverTime: now.toISOString(),
+            adjustedTime: adjustedNow.toISOString(),
+            timeDifference: workoutDateTime.getTime() - adjustedNow.getTime()
+          }
+        });
+        return;
+      }
+    } catch (dateError) {
+      console.error('Date parsing error:', dateError);
+      res.status(422).json({ 
+        error: 'Unprocessable Entity: Invalid date or time format',
+        details: dateError instanceof Error ? dateError.message : 'Unknown error',
+        toastMessage: 'Invalid workout date or time format'
       });
       return;
     }

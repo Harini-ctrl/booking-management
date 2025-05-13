@@ -1,4 +1,4 @@
-  import { Request, Response } from 'express';
+ import { Request, Response } from 'express';
 import Workout, { WorkoutStatus } from '../models/Workouts.model';
 import mongoose from 'mongoose';
  
@@ -41,13 +41,25 @@ export const cancelWorkout = async (req: Request, res: Response): Promise<void> 
     workoutDate.setHours(hours, minutes, 0, 0);
  
     const now = new Date();
-    const hoursRemaining = (workoutDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    
+    // Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
+    const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+    const adjustedNow = new Date(now.getTime() - bufferMs);
+    
+    // Calculate time difference in hours (using adjusted time for IST)
+    const hoursRemaining = (workoutDate.getTime() - adjustedNow.getTime()) / (1000 * 60 * 60);
+    
+    console.log(`Workout time: ${workoutDate.toISOString()}`);
+    console.log(`Server time: ${now.toISOString()}`);
+    console.log(`Adjusted time for IST: ${adjustedNow.toISOString()}`);
+    console.log(`Hours remaining: ${hoursRemaining}`);
  
     if (hoursRemaining < 24) {
       res.status(409).json({
         error: 'Conflict: Cannot cancel workout within 24 hours of start time',
         workoutTime: workoutDate.toISOString(),
         currentTime: now.toISOString(),
+        adjustedCurrentTime: adjustedNow.toISOString(),
         hoursRemaining,
         toastMessage: 'Workouts cannot be cancelled within 24 hours of the scheduled time'
       });
@@ -116,18 +128,24 @@ export const getCoachWorkouts = async (req: Request, res: Response): Promise<voi
    
     // Get current date and time
     const now = new Date();
+    
+    // Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
+    const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+    const adjustedNow = new Date(now.getTime() - bufferMs);
    
-    // Format current date as DD-MM-YYYY to match database format
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = now.getFullYear();
+    // Format adjusted date as DD-MM-YYYY to match database format
+    const day = String(adjustedNow.getDate()).padStart(2, '0');
+    const month = String(adjustedNow.getMonth() + 1).padStart(2, '0');
+    const year = adjustedNow.getFullYear();
     const currentDate = `${day}-${month}-${year}`;
    
-    // Format current time as HH:MM to match database format
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
+    // Format adjusted time as HH:MM to match database format
+    const hours = String(adjustedNow.getHours()).padStart(2, '0');
+    const minutes = String(adjustedNow.getMinutes()).padStart(2, '0');
     const currentTime = `${hours}:${minutes}`;
    
+    console.log(`Server date/time: ${now.toISOString()}`);
+    console.log(`Adjusted date/time for IST: ${adjustedNow.toISOString()}`);
     console.log(`Current date: ${currentDate}, current time: ${currentTime}`);
    
     // Array to track workouts that need status updates
@@ -136,7 +154,7 @@ export const getCoachWorkouts = async (req: Request, res: Response): Promise<voi
     // Check each workout to see if its date and time have passed
     for (const workout of workouts) {
       // Only check workouts that aren't already finished or cancelled
-      if (workout.clientStatus !== 'Finished' && workout.clientStatus !== 'Cancelled') {
+      if (workout.coachStatus !== 'Finished' && workout.coachStatus !== 'Cancelled') {
         // Compare dates first
         if (workout.date < currentDate) {
           // If workout date is earlier than current date
@@ -193,4 +211,3 @@ export const getCoachWorkouts = async (req: Request, res: Response): Promise<voi
     });
   }
 };
- 

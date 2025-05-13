@@ -1,6 +1,6 @@
  import { Request, Response } from 'express';
 import Feedback from '../models/coachFeedback.model';
-import { Workout,WorkoutStatus } from '../models/Workouts.model';
+import { Workout, WorkoutStatus } from '../models/Workouts.model';
  
 /**
  * Create a new feedback from coach
@@ -43,35 +43,40 @@ export const createCoachFeedback = async (req: Request, res: Response): Promise<
       return;
     }
  
-    // Helper function to parse date and time into a Date object
-const parseDateTime = (dateString: string, timeString: string): Date => {
-  const [day, month, year] = dateString.split('-').map(Number);
-  const [hour, minute] = timeString.split(':').map(Number);
-  return new Date(year, month - 1, day, hour, minute);
-};
+    // Parse the date in DD-MM-YYYY format
+    const [day, month, year] = workout.date.split('-').map(Number);
+    const [hours, minutes] = workout.time.split(':').map(Number);
+    
+    // Create Date object (months are 0-indexed in JavaScript)
+    const workoutDateTime = new Date(year, month - 1, day, hours, minutes);
+    
+    // Get current date and time
+    const now = new Date();
+    
+    // Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
+    const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+    const adjustedNow = new Date(now.getTime() - bufferMs);
+    
+    console.log(`Workout date/time: ${workoutDateTime.toISOString()}`);
+    console.log(`Server date/time: ${now.toISOString()}`);
+    console.log(`Adjusted date/time for IST: ${adjustedNow.toISOString()}`);
+    console.log(`Is workout in past? ${workoutDateTime < adjustedNow}`);
  
-// Parse workout date and time into a Date object
-const workoutDateTime = parseDateTime(workout.date, workout.time);
- 
-// Parse current date and time into a Date object
-const now = new Date();
-const currentDateTime = parseDateTime(
-  `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`,
-  `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-);
- 
-console.log(`Parsed workout date: ${workoutDateTime}, current date: ${currentDateTime}`);
- 
-// Check if the workout date and time have passed
-if (workoutDateTime < currentDateTime) {
-  console.log(`Workout ${workout._id} is eligible for feedback.`);
-} else {
-  res.status(400).json({
-    error: 'Bad Request: Workout is not yet completed',
-    toastMessage: 'You can only provide feedback for workouts that have already occurred'
-  });
-  return;
-}
+    // Check if the workout date and time have passed (using adjusted time for IST)
+    if (workoutDateTime < adjustedNow) {
+      console.log(`Workout ${workout._id} is eligible for feedback.`);
+    } else {
+      res.status(400).json({
+        error: 'Bad Request: Workout is not yet completed',
+        toastMessage: 'You can only provide feedback for workouts that have already occurred',
+        debug: {
+          workoutTime: workoutDateTime.toISOString(),
+          serverTime: now.toISOString(),
+          adjustedTime: adjustedNow.toISOString()
+        }
+      });
+      return;
+    }
  
     // Check if feedback already exists for this workout and client
     const existingFeedback = await Feedback.findOne({ workoutId, coachId });

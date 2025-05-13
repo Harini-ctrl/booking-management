@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import Workout, { WorkoutStatus } from '../models/Workouts.model';
 
@@ -91,16 +91,22 @@ export const createWorkout = async (req: Request, res: Response): Promise<void> 
       // Get current date for comparison
       const currentDate = new Date();
       
+      // Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
+      const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+      const adjustedCurrentDate = new Date(currentDate.getTime() - bufferMs);
+      
       console.log(`Workout date: ${workoutDate.toISOString()}`);
       console.log(`Current date: ${currentDate.toISOString()}`);
-      console.log(`Is workout in past? ${workoutDate < currentDate}`);
+      console.log(`Adjusted current date (for IST): ${adjustedCurrentDate.toISOString()}`);
+      console.log(`Is workout in past? ${workoutDate < adjustedCurrentDate}`);
       
-      // Check if workout date is in the past
-      if (workoutDate < currentDate) {
+      // Check if workout date is in the past (using adjusted time for IST)
+      if (workoutDate < adjustedCurrentDate) {
         res.status(422).json({ 
           error: 'Unprocessable Entity: Cannot create workout for a past date and time',
           workoutDateTime: workoutDate.toISOString(),
           currentDateTime: currentDate.toISOString(),
+          adjustedCurrentDateTime: adjustedCurrentDate.toISOString(),
           toastMessage: 'Cannot schedule workouts in the past'
         });
         return;
@@ -154,7 +160,9 @@ export const createWorkout = async (req: Request, res: Response): Promise<void> 
       toastMessage: 'Something went wrong. Please try again later.'
     });
   }
-};export const getBookedWorkouts = async (req: Request, res: Response): Promise<void> => {
+};
+
+export const getBookedWorkouts = async (req: Request, res: Response): Promise<void> => {
   try {
     // Extract clientId from query parameters
     const { clientId } = req.query;
@@ -193,17 +201,23 @@ export const createWorkout = async (req: Request, res: Response): Promise<void> 
     // Get current date and time
     const now = new Date();
     
-    // Format current date as DD-MM-YYYY to match database format
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = now.getFullYear();
+    // Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
+    const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+    const adjustedNow = new Date(now.getTime() - bufferMs);
+    
+    // Format adjusted date as DD-MM-YYYY to match database format
+    const day = String(adjustedNow.getDate()).padStart(2, '0');
+    const month = String(adjustedNow.getMonth() + 1).padStart(2, '0');
+    const year = adjustedNow.getFullYear();
     const currentDate = `${day}-${month}-${year}`;
     
-    // Format current time as HH:MM to match database format
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
+    // Format adjusted time as HH:MM to match database format
+    const hours = String(adjustedNow.getHours()).padStart(2, '0');
+    const minutes = String(adjustedNow.getMinutes()).padStart(2, '0');
     const currentTime = `${hours}:${minutes}`;
     
+    console.log(`Server date/time: ${now.toISOString()}`);
+    console.log(`Adjusted date/time for IST: ${adjustedNow.toISOString()}`);
     console.log(`Current date: ${currentDate}, current time: ${currentTime}`);
     
     // Array to track workouts that need status updates
@@ -314,8 +328,17 @@ export const cancelWorkout = async (req: Request, res: Response): Promise<void> 
     const workoutDate = new Date(year, month - 1, day);
     workoutDate.setHours(hours, minutes, 0, 0);
     
-    // Calculate time difference in hours
-    const timeDiff = (workoutDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    // Add a buffer of 5 hours and 30 minutes (IST offset) to account for timezone differences
+    const bufferMs = (5 * 60 + 30) * 60 * 1000; // 5 hours and 30 minutes in milliseconds
+    const adjustedNow = new Date(now.getTime() - bufferMs);
+    
+    // Calculate time difference in hours (using adjusted time for IST)
+    const timeDiff = (workoutDate.getTime() - adjustedNow.getTime()) / (1000 * 60 * 60);
+    
+    console.log(`Workout time: ${workoutDate.toISOString()}`);
+    console.log(`Server time: ${now.toISOString()}`);
+    console.log(`Adjusted time for IST: ${adjustedNow.toISOString()}`);
+    console.log(`Hours remaining: ${timeDiff}`);
     
     // Check if workout is within 24 hours
     if (timeDiff < 24) {
@@ -324,6 +347,7 @@ export const cancelWorkout = async (req: Request, res: Response): Promise<void> 
         toastMessage: 'Workouts cannot be cancelled within 24 hours of the scheduled time',
         workoutTime: workoutDate.toISOString(),
         currentTime: now.toISOString(),
+        adjustedCurrentTime: adjustedNow.toISOString(),
         hoursRemaining: timeDiff
       });
       return;
